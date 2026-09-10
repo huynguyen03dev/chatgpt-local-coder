@@ -99,7 +99,7 @@ See [Tunnel options](#-tunnel-options) below. You need a **public HTTPS** URL po
 | Field | Value |
 |-------|-------|
 | **Name** | `Local Coder` |
-| **Description** | `Local coding agent. First call agent_status + project_context. Use glob/grep to explore, apply_patch to edit, run_command for shell.` |
+| **Description** | `Local coding agent. Use run_command for search/list/Git, read_text_file to inspect, apply_patch to edit, and project_context when switching projects.` |
 | **URL** | `https://<your-tunnel>/mcp/<MCP_TOKEN>` — see below |
 | **Authentication** | None (the token is already in the URL) |
 
@@ -200,12 +200,9 @@ Free sessions expire after **60 minutes** and the URL changes each time, so you 
 
 **40+ tools** with structured JSON responses `{ ok, tool, summary, data }`.
 
-### Onboarding *(call these first)*
+### ChatGPT slim profile
 
-| Tool | Description |
-|------|-------------|
-| `agent_status` | Permissions, workspace roots, audit log |
-| `project_context` | Reads AGENTS.md, README, CLAUDE.md, configs |
+The default `slim` profile exposes exactly 12 tools: `read_text_file`, `read_image`, `write_file`, `apply_patch`, `run_command`, `shell_status`, `start_process`, `process_output`, `project_context`, `list_skills`, `load_skill`, and `rewind`. Use `project_context(path)` when switching projects; it reads only that project's `AGENTS.md`. Wrapper tools remain available only in `full` where registered.
 
 ### Filesystem
 

@@ -18,12 +18,7 @@ import { loadProjectSkill, loadProjectSkills } from "../lib/skills-loader.js";
 
 
 const contextFileNames = [
-  "CLAUDE.md",
   "AGENTS.md",
-  "README.md",
-  ".claude/settings.json",
-  ".codex/config.toml",
-  ".cursor/rules",
 ];
 
 async function exists(filePath: string): Promise<boolean> {
@@ -71,7 +66,7 @@ export function registerContextTools(server: McpServer, workspaceRoot: string): 
     "list_skills",
     {
       title: "List Skills",
-      description: "List project skills and their short activation descriptions. Read a matching skill with load_skill before following it.",
+      description: "List Agent Skills from project .agents/skills and global ~/.agents/skills. Load a matching skill only when relevant.",
       inputSchema: {},
       annotations: toolAnnotations("read"),
     },
@@ -85,7 +80,7 @@ export function registerContextTools(server: McpServer, workspaceRoot: string): 
     "load_skill",
     {
       title: "Load Skill",
-      description: "Load one skill's complete instructions. Computer Use includes its bundled guidance, API, and confirmation references.",
+      description: "Load one Agent Skill's complete SKILL.md instructions by exact name.",
       inputSchema: {
         name: z.string().min(1).describe("Exact skill name returned by list_skills"),
         max_bytes: z.number().int().positive().max(500000).optional().default(200000),
@@ -104,7 +99,7 @@ export function registerContextTools(server: McpServer, workspaceRoot: string): 
     {
       title: "Project Context",
       description:
-        "Load CLAUDE.md/AGENTS.md for a project path. Use when the task targets a repo other than WORKSPACE_PATH (default project is already in MCP instructions).",
+        "Load AGENTS.md for a project path. Use when the task targets a repo other than WORKSPACE_PATH (default project is already in MCP instructions).",
       inputSchema: {
         path: z.string().optional().describe("Project directory, defaults to primary workspace"),
         max_depth: z.number().int().min(0).max(5).optional().default(3),

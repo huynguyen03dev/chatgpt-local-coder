@@ -2,10 +2,9 @@
 
 MCP server local giống Codex: đọc/ghi file, chạy lệnh, git. Dùng với ChatGPT Developer Mode hoặc bất kỳ MCP client nào.
 
-## Lần đầu kết nối — gọi ngay 2 tool này
+## Lần đầu kết nối
 
-1. **`agent_status`** — xem quyền, full disk access, workspace roots
-2. **`project_context`** — đọc AGENTS.md, README, CLAUDE.md trong project
+Profile `slim` chỉ giữ các primitive cần thiết. Khi chuyển sang repo/project khác, gọi **`project_context(path)`** để nạp đúng `AGENTS.md` của project đó.
 
 ## Quyền truy cập
 
@@ -48,14 +47,12 @@ Bình thường khi:
 
 | Profile | Số tool | Dùng khi |
 |---|---|---|
-| `slim` *(mặc định)* | **28** | ChatGPT web — payload `tools/list` nhỏ, ít lỗi discovery |
+| `slim` *(mặc định)* | **12** | ChatGPT web — payload `tools/list` nhỏ, ít lỗi discovery |
 | `full` | **47** | MCP client khác, hoặc khi cần nhóm tool bên dưới |
 
-**Chỉ có ở `full`** — gọi các tool này ở `slim` sẽ báo *tool not found*:
+`slim` expose đúng 12 tool: `read_text_file`, `read_image`, `write_file`, `apply_patch`, `run_command`, `shell_status`, `start_process`, `process_output`, `project_context`, `list_skills`, `load_skill`, `rewind`.
 
-`delete_file` · `delete_directory` · `move_file` · `replace_regex` · `list_allowed_directories` · `mcp_tools` · `mcp_call` · `git_log` · `git_branch` · `git_stash` · `git_reset` · `git_pull` · `git_push` · `git_checkout`
-
-Ở `slim`, thay thế bằng `run_command` (`git log`, `git push`, `rm`, `mv`, …). Gọi `agent_status` để biết profile đang chạy.
+Các wrapper như `glob`, `grep`, `list_directory`, `edit_file`, `multi_edit`, `git_*`, `agent_status`, `remember`, `load_path_rules`, `node_repl`, `ponytail_turn`, `mcp_servers` không có trong `slim`; implementation vẫn có thể tồn tại cho `full`. Ở `slim`, dùng `run_command` cho `ls/find/fd/rg`, Git và CLI thông thường.
 
 ## Mapping Claude Code ↔ Codex MCP
 
@@ -64,11 +61,11 @@ Bình thường khi:
 | `Read` | `read_text_file` | Có `offset`+`limit` (line numbers) |
 | Image read | `read_image` | PNG/JPEG/WebP/GIF → native MCP image content |
 | `Write` | `write_file` | |
-| `Edit` | `edit_file` | Có `replace_all` |
-| `MultiEdit` | `multi_edit` | |
-| `Glob` | `glob` | Sort theo mtime |
-| `Grep` | `grep` | content / files_with_matches / count |
-| `LS` | `list_directory` | Có `ignore` globs |
+| `Edit` | `apply_patch` | `edit_file` chỉ dùng ở `full` |
+| `MultiEdit` | `apply_patch` | `multi_edit` chỉ dùng ở `full` |
+| `Glob` | `run_command` (`find`/`fd`) | `glob` chỉ dùng ở `full` |
+| `Grep` | `run_command` (`rg`/`grep`) | `grep` wrapper chỉ dùng ở `full` |
+| `LS` | `run_command` (`ls`) | `list_directory` chỉ dùng ở `full` |
 | `Bash` | `run_command` | Lệnh ngắn, chờ xong |
 | Background shell | `start_process` + `process_output` | |
 | `Rewind` | `rewind` | `list` / `preview` / `restore` — undo file edits qua checkpoint tự động |
@@ -76,8 +73,8 @@ Bình thường khi:
 | — | `mcp_servers`, `mcp_tools`, `mcp_call` | Diagnostic/fallback cho MCP upstream. `mcp_tools`/`mcp_call` chỉ có ở `full` |
 | — | Admin UI `:<ADMIN_PORT>/ui` | Import MCP từ Cursor / Claude Code / OpenCode (mặc định 3001) |
 | — | `apply_patch` | Codex/OpenAI style (thêm so với Claude) |
-| — | `git_*`, `git_restore` | Git tools riêng (Claude dùng Bash) |
-| — | `project_context` | Đọc AGENTS.md / CLAUDE.md |
+| — | `git_*`, `git_restore` | Chỉ `full`; `slim` dùng Git qua `run_command` |
+| — | `project_context` | Chỉ đọc AGENTS.md |
 
 **Không có trong MCP này** (ChatGPT built-in hoặc MCP khác): `WebSearch`, `WebFetch`, `Task`/subagent, `NotebookEdit`, `LSP`.
 
@@ -85,20 +82,20 @@ Bình thường khi:
 
 | Việc cần làm | Tool |
 |---|---|
-| Tìm file theo tên | `glob` |
-| Tìm nội dung | `grep` |
+| Tìm file theo tên | `run_command` với `find`/`fd` |
+| Tìm nội dung | `run_command` với `rg`/`grep` |
 | Đọc file text/code | `read_text_file` |
 | Đọc file ảnh | `read_image` |
-| Liệt kê thư mục | `list_directory` |
+| Liệt kê thư mục | `run_command` với `ls` |
 | Sửa bằng diff/patch | `apply_patch` (ưu tiên) |
-| Sửa nhiều đoạn | `multi_edit` |
+| Sửa nhiều đoạn | `apply_patch` |
 | Sửa bằng regex | `replace_regex` *(full)* |
 | Tạo file mới | `write_file` |
 | Xóa / đổi tên | `delete_file`, `move_file` *(full)* — ở `slim` dùng `run_command` |
 | Chạy lệnh ngắn | `run_command` |
 | Build/test dài | `start_process` → `process_output` |
-| Git | `git_status`, `git_diff`, `git_commit`, `git_restore` |
-| Restore file từ commit | `git_restore` (không dùng `git_checkout` cho file) |
+| Git | `run_command` với Git CLI |
+| Restore file từ commit | `run_command` với `git restore -- <files>` |
 | Undo edits trong session | `rewind` action `list` → `preview` → `restore` (không track bash) |
 | Switch branch | `git_checkout` / `git_branch` *(full)* — ở `slim` dùng `run_command "git switch <branch>"` |
 
@@ -117,7 +114,7 @@ Tool response có thể chứa `run_command_fallback` — dùng lệnh đó nế
 
 > Cả 4 tool trong bảng trên đều **chỉ có ở profile `full`**. Ở `slim` (mặc định) chúng không tồn tại — dùng thẳng `run_command`.
 
-**Ổn định:** `git_status`, `git_diff`, `git_add`, `git_commit` (có ở cả `slim` và `full`) · `git_log`, `git_branch`, `git_stash`, `git_reset`, `git_pull` (chỉ `full`).
+Các wrapper Git chỉ dành cho `full`; profile `slim` dùng Git CLI qua `run_command`.
 
 ## Format `apply_patch` (Codex-style)
 
@@ -145,7 +142,7 @@ Dùng `dry_run: true` để xem diff trước khi ghi.
 
 - Dùng path tuyệt đối: `C:\Users\...\project\src\file.ts` · `/Users/you/project/src/file.ts`
 - Hoặc relative từ `WORKSPACE_PATH` trong `.env`
-- Gọi `agent_status` để xem workspace roots (`list_allowed_directories` chỉ có ở profile `full`)
+- `WORKSPACE_PATH` là cwd mặc định; dùng path tuyệt đối khi làm việc ngoài project mặc định
 
 ## Khởi động server
 
@@ -180,5 +177,5 @@ Health check: `http://127.0.0.1:3000/health` | Admin UI: `http://127.0.0.1:<ADMI
 | Patch context not found | Đọc file trước; thêm context lines (dòng bắt đầu bằng space) |
 | ChatGPT hỏi quyền mỗi lần | Settings → Apps → đặt *Chỉ hỏi trước thay đổi quan trọng*; kiểm tra `CHATGPT_AUTO_APPROVE=true`. **Không** bấm "Luôn cho phép" trên popup (xem mục trên) |
 | Connection failed | Server + tunnel đều phải chạy; URL phải HTTPS và có `/mcp/<MCP_TOKEN>` |
-| Tool not found | Tool đó chỉ có ở profile `full` — xem mục *Tool profile*. Gọi `agent_status` để kiểm tra |
+| Tool not found | Kiểm tra mục *Tool profile*; `slim` chỉ expose 12 primitive, các wrapper khác chỉ có ở `full` |
 | Connector loading mãi khi bấm Create | Build cũ bị deadlock SSE stream. Chạy `npm run build` rồi khởi động lại server |
