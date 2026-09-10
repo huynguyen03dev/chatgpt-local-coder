@@ -98,9 +98,10 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 // ChatGPT co the goi "/" hoac "/mcp" — ho tro ca hai.
 // Neu dat MCP_TOKEN, endpoint doi thanh "/<token>" + "/mcp/<token>" va cac path
-// khong co token se tra 401 (chong scan tunnel URL / trang web goi vao localhost).
+// khong co token se tra 404 (chong scan tunnel URL / trang web goi vao localhost).
 const MCP_PATHS = MCP_TOKEN ? [`/${MCP_TOKEN}`, `/mcp/${MCP_TOKEN}`] : ["/", "/mcp"];
 const MCP_PATHS_SET = new Set(MCP_PATHS);
+const HEALTH_MCP_ENDPOINTS = MCP_TOKEN ? ["/<redacted>", "/mcp/<redacted>"] : MCP_PATHS;
 
 app.use((req, res, next) => {
   const started = Date.now();
@@ -164,7 +165,8 @@ app.get("/health", (_req, res) => {
     fullDiskAccess: getFullDiskAccess(),
     activeSessions: sessionManager.count(),
     sessionRecovery: SESSION_RECOVERY,
-    mcpEndpoints: MCP_PATHS,
+    mcpAuthEnabled: Boolean(MCP_TOKEN),
+    mcpEndpoints: HEALTH_MCP_ENDPOINTS,
     instructions: summarizeInstructionContext(instructionContext),
   });
 });
@@ -305,8 +307,8 @@ const server = app.listen(PORT, HOST, () => {
   console.log("  Codex MCP Server");
   console.log("========================================");
   console.log(`  Local:     http://${HOST}:${PORT}`);
-  console.log(`  MCP:       http://${HOST}:${PORT}${MCP_PATHS[0]}`);
-  console.log(`  MCP alt:   http://${HOST}:${PORT}${MCP_PATHS[1]}`);
+  console.log(`  MCP:       http://${HOST}:${PORT}${HEALTH_MCP_ENDPOINTS[0]}`);
+  console.log(`  MCP alt:   http://${HOST}:${PORT}${HEALTH_MCP_ENDPOINTS[1]}`);
   console.log(`  Health:    http://${HOST}:${PORT}/health`);
   console.log(`  Admin UI:  http://127.0.0.1:${ADMIN_PORT}/ui`);
   console.log(`  Default cwd: ${workspaceRoot}`);
