@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { globFiles } from "../dist/lib/glob-search.js";
 import { grepSearch } from "../dist/lib/grep-search.js";
 import { applyMultiFilePatch, applyUnifiedPatchToText, isMultiFilePatch } from "../dist/lib/patch.js";
+import { detectImageMime } from "../dist/tools/filesystem.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -67,6 +68,18 @@ await run("read offset/limit simulation", async () => {
   const lines = (await fs.readFile(file, "utf-8")).split("\n");
   const slice = lines.slice(1, 3);
   if (slice.join(",") !== "b,c") throw new Error(`unexpected ${slice}`);
+});
+
+await run("image mime detection", async () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+  const webp = Buffer.from("RIFF0000WEBP", "ascii");
+  const gif = Buffer.from("GIF89a", "ascii");
+  if (detectImageMime(png) !== "image/png") throw new Error("PNG not detected");
+  if (detectImageMime(jpeg) !== "image/jpeg") throw new Error("JPEG not detected");
+  if (detectImageMime(webp) !== "image/webp") throw new Error("WebP not detected");
+  if (detectImageMime(gif) !== "image/gif") throw new Error("GIF not detected");
+  if (detectImageMime(Buffer.from("not-an-image")) !== null) throw new Error("non-image misdetected");
 });
 
 await run("edit replace_all simulation", async () => {

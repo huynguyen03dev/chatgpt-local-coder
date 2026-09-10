@@ -212,6 +212,7 @@ Free sessions expire after **60 minutes** and the URL changes each time, so you 
 | Tool | Description |
 |------|-------------|
 | `read_text_file` | Read source files (offset + limit) |
+| `read_image` | Read PNG/JPEG/WebP/GIF as native MCP image content |
 | `write_file` | Create or overwrite files |
 | `edit_file` | Find-and-replace edits |
 | `multi_edit` | Multiple edits in one file |

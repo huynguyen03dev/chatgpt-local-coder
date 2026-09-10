@@ -48,7 +48,7 @@ Bình thường khi:
 
 | Profile | Số tool | Dùng khi |
 |---|---|---|
-| `slim` *(mặc định)* | **23** | ChatGPT web — payload `tools/list` nhỏ, ít lỗi discovery |
+| `slim` *(mặc định)* | **28** | ChatGPT web — payload `tools/list` nhỏ, ít lỗi discovery |
 | `full` | **47** | MCP client khác, hoặc khi cần nhóm tool bên dưới |
 
 **Chỉ có ở `full`** — gọi các tool này ở `slim` sẽ báo *tool not found*:
@@ -62,6 +62,7 @@ Bình thường khi:
 | Claude Code | Codex MCP | Ghi chú |
 |---|---|---|
 | `Read` | `read_text_file` | Có `offset`+`limit` (line numbers) |
+| Image read | `read_image` | PNG/JPEG/WebP/GIF → native MCP image content |
 | `Write` | `write_file` | |
 | `Edit` | `edit_file` | Có `replace_all` |
 | `MultiEdit` | `multi_edit` | |
@@ -86,7 +87,8 @@ Bình thường khi:
 |---|---|
 | Tìm file theo tên | `glob` |
 | Tìm nội dung | `grep` |
-| Đọc file | `read_text_file` |
+| Đọc file text/code | `read_text_file` |
+| Đọc file ảnh | `read_image` |
 | Liệt kê thư mục | `list_directory` |
 | Sửa bằng diff/patch | `apply_patch` (ưu tiên) |
 | Sửa nhiều đoạn | `multi_edit` |

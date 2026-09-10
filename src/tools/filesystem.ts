@@ -13,8 +13,40 @@ import { toolResult } from "../lib/tool-result.js";
 import { globFiles } from "../lib/glob-search.js";
 import { grepSearch } from "../lib/grep-search.js";
 
+export function detectImageMime(buffer: Buffer): "image/png" | "image/jpeg" | "image/webp" | "image/gif" | null {
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
 
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
 
+  if (
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+
+  if (buffer.length >= 6) {
+    const signature = buffer.toString("ascii", 0, 6);
+    if (signature === "GIF87a" || signature === "GIF89a") return "image/gif";
+  }
+
+  return null;
+}
 async function searchDirectory(
   dir: string,
   regex: RegExp,
@@ -107,6 +139,56 @@ export function registerFilesystemTools(server: McpServer): void {
         head !== undefined ? lines.slice(0, head).join("\n") : tail !== undefined ? lines.slice(-tail).join("\n") : content;
       await audit({ tool: "read_text_file", action: "read", target: validPath, status: "ok" });
       return toolResult("read_text_file", { path: validPath, content: result, head, tail });
+    }
+  );
+
+  server.registerTool(
+    "read_image",
+    {
+      title: "Read Image",
+      description: "Read a local PNG, JPEG, WebP, or GIF as native MCP image content so the model can inspect it directly.",
+      inputSchema: {
+        path: z.string(),
+      },
+      annotations: toolAnnotations("read"),
+    },
+    async ({ path: filePath }) => {
+      const validPath = await validatePath(filePath);
+      const stat = await fs.stat(validPath);
+      if (!stat.isFile()) throw new Error("Path is not a regular file");
+
+      const buffer = await fs.readFile(validPath);
+      const mimeType = detectImageMime(buffer);
+      if (!mimeType) {
+        throw new Error("Unsupported image format. Supported formats: PNG, JPEG, WebP, GIF");
+      }
+
+      const payload = {
+        ok: true,
+        tool: "read_image",
+        summary: `read_image: ${validPath}`,
+        data: {
+          path: validPath,
+          bytes: buffer.length,
+          mime_type: mimeType,
+        },
+      };
+
+      await audit({
+        tool: "read_image",
+        action: "read",
+        target: validPath,
+        status: "ok",
+        details: { bytes: buffer.length, mimeType },
+      });
+
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(payload, null, 2) },
+          { type: "image" as const, data: buffer.toString("base64"), mimeType },
+        ],
+        structuredContent: payload,
+      };
     }
   );
 
