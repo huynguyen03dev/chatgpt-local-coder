@@ -28,7 +28,7 @@ try {
     adminPort: 3001,
   });
 
-  if (!ctx.instructionsText.includes("Agent workflow")) {
+  if (!ctx.instructionsText.includes("Local coding workflow")) {
     throw new Error("missing agent prompt");
   }
   ok("agent prompt in instructions");
@@ -43,10 +43,10 @@ try {
   }
   ok("git block");
 
-  if (!ctx.instructionsText.includes("agent_status")) {
-    throw new Error("missing footer quick pointers");
+  if (!ctx.instructionsText.includes("project_context(path) — load AGENTS.md from another repo")) {
+    throw new Error("missing slim-safe footer quick pointers");
   }
-  ok("footer pointers (agent_status not duplicated in body)");
+  ok("slim-safe footer pointers");
 
   if (ctx.instructionBytes < 500) {
     throw new Error(`instructions too small: ${ctx.instructionBytes}`);

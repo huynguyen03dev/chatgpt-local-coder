@@ -77,6 +77,9 @@ const server = spawn(process.execPath, ["dist/index.js"], {
     ...process.env,
     PORT: String(mcpPort),
     ADMIN_PORT: String(adminPort),
+    MCP_TOKEN: "",
+    ADMIN_TOKEN: "",
+    MCP_SESSION_RECOVERY: "true",
     CHATGPT_TOOL_PROFILE: "slim",
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -96,7 +99,7 @@ try {
   console.log("OK  admin health");
 
   const preview = await (await fetch(`http://127.0.0.1:${adminPort}/api/instructions/preview`)).json();
-  if (!preview.preview?.includes("Agent workflow")) throw new Error("instructions preview missing agent prompt");
+  if (!preview.preview?.includes("Local coding workflow")) throw new Error("instructions preview missing agent prompt");
   console.log(`OK  instructions preview ${preview.total_chars} chars`);
 
   // MCP session + tools/list count

@@ -54,8 +54,10 @@ export function buildServerInstructions(
   const footer = [
     "## Quick pointers",
     `Workspace roots: ${workspaceRoots.join("; ")}`,
-    "agent_status — full tool cheat sheet + apply_patch format",
-    "project_context(path) — load CLAUDE.md from another repo",
+    "Use run_command for search, listing, Git, and normal CLI workflows.",
+    "Use read_text_file before editing; prefer apply_patch for existing files.",
+    "project_context(path) — load AGENTS.md from another repo",
+    "list_skills / load_skill — load a relevant general Agent Skill when needed",
   ].join("\n");
 
   const body = contextBlock?.trim();
